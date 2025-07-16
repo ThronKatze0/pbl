@@ -1,15 +1,21 @@
-import mqtt from 'mqtt';
+import {connect} from 'mqtt';
+import { randomBetween } from './coffee.js';
 
-const MQTT_BROKER_URL = 'mqtt://test.mosquitto.org';
+const options = {
+    username: "m5stack",
+    password: "c=Yu#DkuaL3}g^@"
+}
+const client = connect('mqtt://10.0.0.29', options);
 
 const productMap = {
-  "885370316087": { start: 0, end: 30 },
-  "A-prgw69":      { start: 30, end: 60 },
-  "5035223121800": { start: 60, end: 90 },
-  "5026555260862": { start: 90, end: 120 }
+  "U162": { level: 1, start: 0, end: 10 },
+  "U146": { level: 1, start: 10, end: 20 },
+  "U122": { level: 1, start: 20, end: 30 },
+  "U010": { level: 2, start: 0, end: 10 },
+  "U175": { level: 2, start: 10, end: 20 },
+  "U009": { level: 2, start: 20, end: 30 },
+  "S001": "rainbow"
 };
-
-const client = mqtt.connect(MQTT_BROKER_URL);
 
 client.on('connect', () => {
   console.log('✅ Connected to MQTT broker');
@@ -21,16 +27,24 @@ client.on('connect', () => {
       console.log('📡 Subscribed to topic: pbl/qr');
     }
   });
+  console.log("publish");
+  client.publish('pbl/light', '1:0:10');
 });
 
 client.on('message', (topic, message) => {
   if (topic === 'pbl/qr') {
     const qrCode = message.toString().trim();
     console.log(`📥 QR code received: "${qrCode}"`);
+    if (qrCode == "782004;200;mittel;S153002;") return;
 
     const range = productMap[qrCode];
     if (range) {
-      const payload = `${range.start}:${range.end}`;
+      let payload;
+      if (range != "rainbow") {
+        payload = `${range.level}:${range.start}:${range.end}`;
+      } else {
+        payload = "rainbow";
+      }
       console.log(`💡 Sending to pbl/light → ${payload}`);
       client.publish('pbl/light', payload);
     } else {
